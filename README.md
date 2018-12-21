@@ -2,7 +2,10 @@
 
 Converts a dwarf fortress elevation map into a 3D model.
 
-## There is nothing here yet.  Don't expect anything from this project as long as this notice lives here.
+# Usage
+
+Compile it with cargo, and then run it with the `--help` command.  It just takes
+in an elevation file and outputs a ply.
 
 # Copyright and License
 
