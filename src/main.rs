@@ -5,7 +5,6 @@ extern crate clap;
 use std::io::prelude::*;
 use std::fs::File;
 use clap::{Arg, App};
-use std::io::Cursor;
 use byteorder::{BigEndian, WriteBytesExt};
 
 fn main() {
@@ -51,23 +50,19 @@ fn main() {
             [0, 0, b] => b as u16,
             [r, g, b] => ((r as u32 + g as u32 + b as u32) * 4 / 9) as u16,
         };
-        let mut wtr = vec![];
-        wtr.write_u16::<BigEndian>(x as u16).unwrap();
-        wtr.write_u16::<BigEndian>(y as u16).unwrap();
-        wtr.write_u16::<BigEndian>(height).unwrap();
-        f.write(&wtr).unwrap();
+        f.write_u16::<BigEndian>(x as u16).unwrap();
+        f.write_u16::<BigEndian>(y as u16).unwrap();
+        f.write_u16::<BigEndian>(height).unwrap();
     }
 
     for y in 0..(height - 1) {
         for x in 0..(width - 1) {
-            let startIndex = width * y + x;
-            let mut wtr = vec![];
-            wtr.write_u8(4).unwrap();
-            wtr.write_u32::<BigEndian>(startIndex).unwrap();
-            wtr.write_u32::<BigEndian>(startIndex + 1).unwrap();
-            wtr.write_u32::<BigEndian>(startIndex + 1 + width).unwrap();
-            wtr.write_u32::<BigEndian>(startIndex + width).unwrap();
-            f.write(&wtr).unwrap();
+            let start_index = width * y + x;
+            f.write_u8(4).unwrap();
+            f.write_u32::<BigEndian>(start_index).unwrap();
+            f.write_u32::<BigEndian>(start_index + 1).unwrap();
+            f.write_u32::<BigEndian>(start_index + 1 + width).unwrap();
+            f.write_u32::<BigEndian>(start_index + width).unwrap();
         }
     }
 }
