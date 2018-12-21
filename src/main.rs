@@ -1,13 +1,16 @@
+extern crate byteorder;
 extern crate image;
 extern crate clap;
 
 use std::io::prelude::*;
 use std::fs::File;
 use clap::{Arg, App};
+use std::io::Cursor;
+use byteorder::{BigEndian, WriteBytesExt};
 
 fn main() {
     let matches = App::new("df-elevation-to-model")
-        .version("0.1")
+        .version("0.2")
         .author("Taylor C. Richberger <taywee@gmx.com>")
         .about("Converts a Dwarf Fortress elevation map to a 3D model")
         .arg(Arg::with_name("elevation")
@@ -30,13 +33,13 @@ fn main() {
 
     let mut f = File::create(matches.value_of("output").unwrap()).unwrap();
     f.write(format!("ply\n\
-        format ascii 1.0\n\
+        format binary_big_endian 1.0\n\
         element vertex {}\n\
-        property int x\n\
-        property int y\n\
-        property int z\n\
+        property uint16 x\n\
+        property uint16 y\n\
+        property uint16 z\n\
         element face {}\n\
-        property list uchar int vertex_index\n\
+        property list uint8 uint32 vertex_index\n\
         end_header\n",
         width * height,
         (width - 1) * (height - 1)).as_bytes()
@@ -45,16 +48,26 @@ fn main() {
     for (x, y, pixel) in img.enumerate_pixels() {
         let height = match pixel.data {
             // b maxes out at 100 when others hit 75; need to scale by that amount
-            [0, 0, b] => b as u32,
-            [r, g, b] => (r as u32 + g as u32 + b as u32) * 4 / 9,
+            [0, 0, b] => b as u16,
+            [r, g, b] => ((r as u32 + g as u32 + b as u32) * 4 / 9) as u16,
         };
-        f.write(format!("{} {} {}\n", x, y, height).as_bytes()).unwrap();
+        let mut wtr = vec![];
+        wtr.write_u16::<BigEndian>(x as u16).unwrap();
+        wtr.write_u16::<BigEndian>(y as u16).unwrap();
+        wtr.write_u16::<BigEndian>(height).unwrap();
+        f.write(&wtr).unwrap();
     }
 
     for y in 0..(height - 1) {
         for x in 0..(width - 1) {
             let startIndex = width * y + x;
-            f.write(format!("4 {} {} {} {}\n", startIndex, startIndex + 1, startIndex + 1 + width, startIndex + width).as_bytes()).unwrap();
+            let mut wtr = vec![];
+            wtr.write_u8(4).unwrap();
+            wtr.write_u32::<BigEndian>(startIndex).unwrap();
+            wtr.write_u32::<BigEndian>(startIndex + 1).unwrap();
+            wtr.write_u32::<BigEndian>(startIndex + 1 + width).unwrap();
+            wtr.write_u32::<BigEndian>(startIndex + width).unwrap();
+            f.write(&wtr).unwrap();
         }
     }
 }
